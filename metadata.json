@@ -1,0 +1,5 @@
+{
+  "name": "TaskFlow - Điều phối Công việc",
+  "description": "Hệ thống theo dõi tiến độ, điều phối và giám sát thực hiện nhiệm vụ cho cơ quan, đơn vị. Hỗ trợ quản lý nhiệm vụ lớn và sơ đồ Gantt.",
+  "requestFramePermissions": []
+}

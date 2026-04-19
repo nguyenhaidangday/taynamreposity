@@ -1,0 +1,170 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isAuthenticated() && request.auth.token.email_verified == true;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function getUserData() {
+      let path = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(path) ? get(path).data : null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "nguyen.haidangday@gmail.com" ||
+         (getUserData() != null && getUserData().get('role', 'Chuyên viên') == 'Admin'));
+    }
+    
+    function isLanhDao() {
+      let data = getUserData();
+      return isAuthenticated() && (isAdmin() || (data != null && data.get('role', 'Chuyên viên') in ['Lãnh đạo', 'Chánh Văn phòng', 'Phó Chánh Văn phòng 1', 'Phó Chánh Văn phòng 2', 'Admin']));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'status']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['Admin', 'Chánh Văn phòng', 'Phó Chánh Văn phòng 1', 'Phó Chánh Văn phòng 2', 'Chuyên viên', 'Lãnh đạo'] &&
+             data.status in ['pending', 'active'];
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['title', 'creatorId', 'assigneeId', 'status']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 1000 &&
+             data.creatorId is string &&
+             data.assigneeId is string &&
+             (!data.keys().contains('projectId') || data.projectId is string);
+    }
+
+    function isValidIndicator(data) {
+      return data.keys().hasAll(['name', 'field', 'unit', 'targetValue', 'assigneeId', 'creatorId', 'status', 'periodType', 'periodValue']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 500 &&
+             data.field is string &&
+             data.unit is string &&
+             data.targetValue is number &&
+             data.assigneeId is string &&
+             data.creatorId is string &&
+             data.status in ['Chờ duyệt', 'Đã duyệt', 'Từ chối'] &&
+             data.periodType in ['Năm', 'Giai đoạn', 'Quý'] &&
+             data.periodValue is string;
+    }
+
+    function isValidEvaluation(data) {
+      return data.keys().hasAll(['userId', 'period', 'totalScore', 'rank']) &&
+             data.userId is string &&
+             data.period is string &&
+             data.totalScore is number &&
+             data.rank is string;
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['title', 'startDate', 'endDate', 'status', 'creatorId']) &&
+             data.title is string && data.title.size() > 0 &&
+             data.startDate is string &&
+             data.endDate is string &&
+             data.status in ['Đang thực hiện', 'Hoàn thành', 'Tạm dừng'] &&
+             data.creatorId is string;
+    }
+
+    function isValidApp(data) {
+      return data.keys().hasAll(['name', 'icon', 'url', 'position']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.icon is string &&
+             data.url is string &&
+             data.position is number;
+    }
+
+    function isValidSchedule(data) {
+      return data.keys().hasAll(['date', 'time', 'title', 'chairperson', 'location', 'status', 'creatorId', 'creatorEmail', 'createdAt']) &&
+             data.date is string && data.time is string &&
+             data.title is string && data.title.size() > 0 &&
+             data.chairperson is string &&
+             data.location is string &&
+             data.status in ['Chờ duyệt', 'Đã duyệt', 'Từ chối'] &&
+             data.creatorId is string &&
+             data.creatorEmail is string &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && 
+                      (request.resource.data.role == 'Chuyên viên' || request.auth.token.email == "nguyen.haidangday@gmail.com") && 
+                      (request.resource.data.status == 'active');
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow create: if isEmailVerified() && isValidTask(request.resource.data);
+      allow update: if isEmailVerified() && isValidTask(request.resource.data) &&
+                      (isLanhDao() || request.auth.uid == resource.data.assigneeId);
+      allow delete: if isAuthenticated() && (isAdmin() || isLanhDao() || request.auth.uid == resource.data.creatorId);
+    }
+
+    match /projects/{projectId} {
+      allow read: if isAuthenticated();
+      allow create: if isEmailVerified() && isValidProject(request.resource.data) && request.resource.data.creatorId == request.auth.uid;
+      allow update: if isEmailVerified() && isValidProject(request.resource.data) &&
+                      (isLanhDao() || request.auth.uid == resource.data.creatorId);
+      allow delete: if isAuthenticated() && (isAdmin() || isLanhDao() || request.auth.uid == resource.data.creatorId);
+    }
+
+    match /indicators/{indicatorId} {
+      allow read: if isAuthenticated();
+      allow create: if isEmailVerified() && isValidIndicator(request.resource.data) &&
+                      (isLanhDao() || request.resource.data.status == 'Chờ duyệt');
+      allow update: if isEmailVerified() && isValidIndicator(request.resource.data) &&
+                      (isLanhDao() || (request.auth.uid == resource.data.assigneeId && request.resource.data.status == resource.data.status));
+      allow delete: if isAuthenticated() && (isAdmin() || isLanhDao() || request.auth.uid == resource.data.creatorId);
+    }
+
+    match /evaluations/{evaluationId} {
+      allow read: if isAuthenticated();
+      allow create: if isEmailVerified() && isLanhDao() && isValidEvaluation(request.resource.data);
+      allow update: if isEmailVerified() && isLanhDao() && isValidEvaluation(request.resource.data);
+      allow delete: if isEmailVerified() && isAdmin();
+    }
+
+    match /apps/{appId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isEmailVerified() && isAdmin() && isValidApp(request.resource.data);
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+
+    match /schedules/{scheduleId} {
+      allow read: if isAuthenticated();
+      allow create: if isEmailVerified() && isValidSchedule(request.resource.data);
+      allow update: if isEmailVerified() && isValidSchedule(request.resource.data);
+      allow delete: if isAuthenticated() && (isAdmin() || (resource.data.creatorId == request.auth.uid));
+    }
+  }
+}

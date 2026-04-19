@@ -1,0 +1,207 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Thông tin người dùng và phân quyền",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { 
+          "type": "string", 
+          "enum": ["Admin", "Chánh Văn phòng", "Phó Chánh Văn phòng 1", "Phó Chánh Văn phòng 2", "Chuyên viên", "Lãnh đạo"] 
+        },
+        "status": { "type": "string", "enum": ["pending", "active"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "status"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Thông tin chi tiết công việc",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "projectId": { "type": "string" },
+        "deadline": { "type": "string", "format": "date-time" },
+        "estimatedHours": { "type": "number" },
+        "progress": { "type": "number" },
+        "suggestions": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "assigneeId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "assignedAt": { "type": "string", "format": "date-time" },
+        "status": { 
+          "type": "string", 
+          "enum": ["Chưa thực hiện", "Đang thực hiện", "Chờ phê duyệt", "Hoàn thành", "Quá hạn"] 
+        },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "qualityStatus": { "type": "string", "enum": ["Chưa đánh giá", "Đạt", "Không đạt", "Xuất sắc"] },
+        "qualityNote": { "type": "string" },
+        "evaluatorId": { "type": "string" },
+        "timeSlots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "type": "string" },
+              "hours": { "type": "array", "items": { "type": "number" } }
+            }
+          }
+        },
+        "progressStatus": {
+          "type": "string",
+          "enum": ["Chậm tiến độ", "Đúng tiến độ", "Vượt tiến độ", "Chưa xác định"]
+        },
+        "qualityStatus": {
+          "type": "string",
+          "enum": ["Chưa đánh giá", "Đạt", "Không đạt", "Xuất sắc"]
+        }
+      },
+      "required": ["title", "creatorId", "assigneeId", "status"]
+    },
+    "UserEvaluation": {
+      "title": "UserEvaluation",
+      "description": "Đánh giá kết quả công việc định kỳ",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "period": { "type": "string" },
+        "quantityScore": { "type": "number" },
+        "timelinessScore": { "type": "number" },
+        "qualityScore": { "type": "number" },
+        "totalScore": { "type": "number" },
+        "rank": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "details": {
+          "type": "object",
+          "properties": {
+            "totalTasks": { "type": "number" },
+            "completedTasks": { "type": "number" },
+            "onTimeTasks": { "type": "number" },
+            "qualityApprovedTasks": { "type": "number" }
+          }
+        }
+      },
+      "required": ["userId", "period", "totalScore", "rank"]
+    },
+    "Indicator": {
+      "title": "Indicator",
+      "description": "Chỉ tiêu phát triển",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "field": { "type": "string" },
+        "unit": { "type": "string" },
+        "targetValue": { "type": "number" },
+        "currentValue": { "type": "number" },
+        "assigneeId": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Chờ duyệt", "Đã duyệt", "Từ chối"] },
+        "periodType": { "type": "string", "enum": ["Năm", "Giai đoạn", "Quý"] },
+        "periodValue": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastUpdatedAt": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" }
+      },
+      "required": ["name", "field", "unit", "targetValue", "assigneeId", "creatorId", "status"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Nhiệm vụ lớn / Dự án",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Đang thực hiện", "Hoàn thành", "Tạm dừng"] },
+        "creatorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "phases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "startDate": { "type": "string", "format": "date" },
+              "endDate": { "type": "string", "format": "date" },
+              "status": { "type": "string" },
+              "assigneeId": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["title", "startDate", "endDate", "status", "creatorId"]
+    },
+    "ExternalApp": {
+      "title": "ExternalApp",
+      "description": "Ứng dụng bên ngoài hiển thị trên Landing page",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "url": { "type": "string" },
+        "description": { "type": "string" },
+        "position": { "type": "number" },
+        "isInternal": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "icon", "url", "position"]
+    },
+    "Schedule": {
+      "title": "Schedule",
+      "description": "Lịch làm việc và hội họp",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string" },
+        "title": { "type": "string" },
+        "chairperson": { "type": "string" },
+        "attendees": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["Chờ duyệt", "Đã duyệt", "Từ chối"] },
+        "creatorId": { "type": "string" },
+        "creatorEmail": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["date", "time", "title", "chairperson", "location", "status", "creatorId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Bộ sưu tập người dùng"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Bộ sưu tập công việc"
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Bộ sưu tập nhiệm vụ lớn"
+    },
+    "/indicators/{indicatorId}": {
+      "schema": "Indicator",
+      "description": "Bộ sưu tập chỉ tiêu"
+    },
+    "/evaluations/{evaluationId}": {
+      "schema": "UserEvaluation",
+      "description": "Bộ sưu tập đánh giá kết quả công việc"
+    },
+    "/apps/{appId}": {
+      "schema": "ExternalApp",
+      "description": "Bộ sưu tập ứng dụng liên kết"
+    },
+    "/schedules/{scheduleId}": {
+      "schema": "Schedule",
+      "description": "Bộ sưu tập lịch làm việc"
+    }
+  }
+}
